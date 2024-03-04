@@ -139,8 +139,16 @@ public class AudioEncoder
         {
             var l = await leftChannel.ReadAsync(mbuff);
             await mdfpwm.WriteAsync(mbuff, 0, l);
-            l = await rightChannel.ReadAsync(mbuff);
-            await mdfpwm.WriteAsync(mbuff, 0, l);
+            for(int j = 0; j < (6000 - l); j++)
+            {
+                mdfpwm.WriteByte(0x55);
+            }
+            var r = await rightChannel.ReadAsync(mbuff);
+            await mdfpwm.WriteAsync(mbuff, 0, r);
+            for (int j = 0; j < (6000 - r); j++)
+            {
+                mdfpwm.WriteByte(0x55);
+            }
         }
 
         return mdfpwm.ToArray();
