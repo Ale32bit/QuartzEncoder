@@ -1,9 +1,7 @@
 ﻿namespace QuartzEncoder;
 
 using FFMpegCore;
-using FFMpegCore.Enums;
 using FFMpegCore.Pipes;
-using Microsoft.AspNetCore.Http.HttpResults;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -97,6 +95,14 @@ public class AudioEncoder
         if(stream.Length == 0)
             return null;
 
+        static FFMpegArgumentOptions Options(FFMpegArgumentOptions o)
+        {
+            o.WithAudioSamplingRate(48000);
+            o.WithAudioBitrate(48);
+            o.ForceFormat("dfpwm");
+            return o;
+        }
+
         using var leftChannel = new MemoryStream();
         using var rightChannel = new MemoryStream();
 
@@ -107,16 +113,16 @@ public class AudioEncoder
                 args
                     .OutputToPipe(new StreamPipeSink(leftChannel), o =>
                      {
-                         o.WithAudioSamplingRate(48000);
-                         o.WithAudioBitrate(48);
-                         o.ForceFormat("dfpwm");
+                         Options(o);
+                         /*o.WithAudioFilters(o =>
+                         {
+                             o.Pan();
+                         });*/
                          o.WithCustomArgument("-map_channel 0.0.0");
                      })
                     .OutputToPipe(new StreamPipeSink(rightChannel), o =>
                     {
-                        o.WithAudioSamplingRate(48000);
-                        o.WithAudioBitrate(48);
-                        o.ForceFormat("dfpwm");
+                        Options(o);
                         o.WithCustomArgument("-map_channel 0.0.1");
                     });
             })
@@ -138,13 +144,13 @@ public class AudioEncoder
         for (int i = 0; i < length / 12000; i++)
         {
             var l = await leftChannel.ReadAsync(mbuff);
-            await mdfpwm.WriteAsync(mbuff, 0, l);
+            await mdfpwm.WriteAsync(mbuff.AsMemory(0, l));
             for(int j = 0; j < (6000 - l); j++)
             {
                 mdfpwm.WriteByte(0x55);
             }
             var r = await rightChannel.ReadAsync(mbuff);
-            await mdfpwm.WriteAsync(mbuff, 0, r);
+            await mdfpwm.WriteAsync(mbuff.AsMemory(0, r));
             for (int j = 0; j < (6000 - r); j++)
             {
                 mdfpwm.WriteByte(0x55);
@@ -169,7 +175,9 @@ public class AudioEncoder
     static byte[] ToByteString(string str)
     {
         var buff = Encoding.ASCII.GetBytes(str);
-        var outp = new byte[buff.Length + 1];
+        if (buff.Length > 255)
+            Array.Resize(ref buff, 255);
+        var outp = new byte[Math.Min(buff.Length, 255) + 1];
         outp[0] = (byte)buff.Length;
         buff.CopyTo(outp, 1);
         return outp;
