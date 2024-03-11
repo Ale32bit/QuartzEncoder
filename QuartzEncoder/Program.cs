@@ -17,6 +17,9 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "";
 
 });
+
+app.UseForwardedHeaders();
+
 app.UseAuthorization();
 
 app.MapControllers();

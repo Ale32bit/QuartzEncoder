@@ -7,9 +7,18 @@ namespace QuartzEncoder.Controllers;
 [ApiController]
 public class DfpwmController : ControllerBase
 {
+    private readonly ILogger<DfpwmController> _logger;
+    public DfpwmController(ILogger<DfpwmController> logger)
+    {
+        _logger = logger;
+    }
+
     [HttpGet("dfpwm")]
     public async Task<IActionResult> Dfpwm([FromQuery] string url)
     {
+        var clientIp = HttpContext.Connection.RemoteIpAddress;
+        _logger.LogInformation("[{clientIp}] Converting {url}", clientIp, url);
+
         var buffer = await AudioEncoder.DownloadDfpwm(url);
 
         if (buffer == null)
@@ -21,6 +30,9 @@ public class DfpwmController : ControllerBase
     [HttpGet("mdfpwm")]
     public async Task<IActionResult> Mdfpwm([FromQuery] string url, string? artist, string? title, string? album)
     {
+        var clientIp = HttpContext.Connection.RemoteIpAddress;
+        _logger.LogInformation("[{clientIp}] Converting {url}", clientIp, url);
+
         var buffer = await AudioEncoder.DownloadMdfpwm(url, new()
         {
             Artist = artist,
