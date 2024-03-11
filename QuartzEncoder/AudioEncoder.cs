@@ -11,6 +11,55 @@ using System.Text;
 public class AudioEncoder
 {
     public static readonly string CachePath = Path.Combine(Environment.CurrentDirectory, "cache");
+    public static readonly HttpClient HttpClient = new();
+    public static readonly TimeSpan CacheLifetime = TimeSpan.FromHours(6);
+    // 100 MiB
+    public const long MaxFileSize = 100 * 1024 * 1024;
+
+    private static async Task<bool> TryYTDLP(string url, MemoryStream memoryStream)
+    {
+        var ytDlpProcessStartInfo = new ProcessStartInfo
+        {
+            FileName = "yt-dlp",
+            Arguments = $"--match-filters \"duration<10m\" -x -o - {url}",
+            RedirectStandardOutput = true,
+            UseShellExecute = false
+        };
+
+        using var ytDlpProcess = Process.Start(ytDlpProcessStartInfo);
+
+        using (var ytDlpOutput = ytDlpProcess.StandardOutput.BaseStream)
+        {
+            await ytDlpOutput.CopyToAsync(memoryStream);
+        }
+
+        return memoryStream.Length > 0;
+    }
+
+    private static async Task<bool> TryHTTP(string url, MemoryStream memoryStream)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Head, url);
+        var head = await HttpClient.SendAsync(request);
+        if (!head.IsSuccessStatusCode)
+            return false;
+
+        var mimeType = head.Content.Headers.ContentType?.MediaType;
+        var length = head.Content.Headers.ContentLength;
+
+        if (mimeType is null || length is null)
+            return false;
+
+        if(!mimeType.StartsWith("audio/") && mimeType != "application/octet-stream")
+            return false;
+
+        if (length > MaxFileSize)
+            return false;
+
+        var stream = await HttpClient.GetStreamAsync(url);
+        await stream.CopyToAsync(memoryStream);
+
+        return true;
+    }
 
     private static async Task<Stream> DownloadTrack(string url)
     {
@@ -32,32 +81,30 @@ public class AudioEncoder
             return memoryStream;
         }
 
-        var ytDlpProcessStartInfo = new ProcessStartInfo
+        if (!await TryYTDLP(url, memoryStream))
         {
-            FileName = "yt-dlp",
-            Arguments = $"--match-filters \"duration<10m\" -x -o - {url}",
-            RedirectStandardOutput = true,
-            UseShellExecute = false
-        };
-
-        using var ytDlpProcess = Process.Start(ytDlpProcessStartInfo);
-
-        using (var ytDlpOutput = ytDlpProcess.StandardOutput.BaseStream)
-        {
-            await ytDlpOutput.CopyToAsync(memoryStream);
+            if (!await TryHTTP(url, memoryStream))
+            {
+                return memoryStream;
+            }
         }
 
         memoryStream.Seek(0, SeekOrigin.Begin);
-
-        if (memoryStream.Length > 0)
-        {
-            using var writeStream = File.OpenWrite(Path.Combine(CachePath, hash));
-            await memoryStream.CopyToAsync(writeStream);
-            await writeStream.DisposeAsync();
-        }
+        using var writeStream = File.OpenWrite(Path.Combine(CachePath, hash));
+        await memoryStream.CopyToAsync(writeStream);
+        await writeStream.DisposeAsync();
         memoryStream.Seek(0, SeekOrigin.Begin);
+
+        // clean up old files
+        foreach(var filePath in Directory.EnumerateFiles(CachePath))
+        {
+            var fileDate = File.GetCreationTime(filePath);
+            var age = DateTime.Now - fileDate;
+            if (age > CacheLifetime)
+                File.Delete(Path.Combine(CachePath, filePath));
+        }
+
         return memoryStream;
-
     }
 
     public static async Task<byte[]?> DownloadDfpwm(string url)
@@ -92,7 +139,7 @@ public class AudioEncoder
     {
         using var stream = await DownloadTrack(url);
 
-        if(stream.Length == 0)
+        if (stream.Length == 0)
             return null;
 
         static FFMpegArgumentOptions Options(FFMpegArgumentOptions o)
@@ -145,7 +192,7 @@ public class AudioEncoder
         {
             var l = await leftChannel.ReadAsync(mbuff);
             await mdfpwm.WriteAsync(mbuff.AsMemory(0, l));
-            for(int j = 0; j < (6000 - l); j++)
+            for (int j = 0; j < (6000 - l); j++)
             {
                 mdfpwm.WriteByte(0x55);
             }
