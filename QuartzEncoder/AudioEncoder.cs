@@ -49,7 +49,7 @@ public class AudioEncoder
         if (mimeType is null || length is null)
             return false;
 
-        if(!mimeType.StartsWith("audio/") && mimeType != "application/octet-stream")
+        if(!mimeType.StartsWith("audio/"))
             return false;
 
         if (length > MaxFileSize)

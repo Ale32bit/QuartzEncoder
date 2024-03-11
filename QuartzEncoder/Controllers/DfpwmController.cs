@@ -13,6 +13,11 @@ public class DfpwmController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Download and convert audio to mono format DFPWM1a
+    /// </summary>
+    /// <param name="url"></param>
+    /// <returns>File converted to DFPWM</returns>
     [HttpGet("dfpwm")]
     public async Task<IActionResult> Dfpwm([FromQuery] string url)
     {
@@ -22,11 +27,19 @@ public class DfpwmController : ControllerBase
         var buffer = await AudioEncoder.DownloadDfpwm(url);
 
         if (buffer == null)
-            return NotFound("Source not found, too big or rate limited!");
+            return NotFound("Source not found, too big, rate limited or incompatible!");
 
         return File(buffer, "audio/dfpwm", "audio.dfpwm");
     }
 
+    /// <summary>
+    /// Download and convert audio to stereo format MDFPWMv3 by Drucifer
+    /// </summary>
+    /// <param name="url"></param>
+    /// <param name="artist"></param>
+    /// <param name="title"></param>
+    /// <param name="album"></param>
+    /// <returns>File converted to MDFPWM</returns>
     [HttpGet("mdfpwm")]
     public async Task<IActionResult> Mdfpwm([FromQuery] string url, string? artist, string? title, string? album)
     {
@@ -41,7 +54,7 @@ public class DfpwmController : ControllerBase
         });
 
         if (buffer == null)
-            return NotFound("Source not found, too big or rate limited!");
+            return NotFound("Source not found, too big, rate limited or incompatible!");
 
         return File(buffer, "audio/mdfpwm", "audio.mdfpwm");
     }
