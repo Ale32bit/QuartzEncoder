@@ -18,6 +18,10 @@ public class AudioEncoder
 
     private static async Task<bool> TryYTDLP(string url, MemoryStream memoryStream)
     {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            if (await HostFilterHandler.IsLocalhostOrPrivateNetwork(uri))
+                return false;
+
         var ytDlpProcessStartInfo = new ProcessStartInfo
         {
             FileName = "yt-dlp",
@@ -38,7 +42,13 @@ public class AudioEncoder
 
     private static async Task<bool> TryHTTP(string url, MemoryStream memoryStream)
     {
-        var request = new HttpRequestMessage(HttpMethod.Head, url);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        if (await HostFilterHandler.IsLocalhostOrPrivateNetwork(uri))
+            return false;
+
+        var request = new HttpRequestMessage(HttpMethod.Head, uri);
         var head = await HttpClient.SendAsync(request);
         if (!head.IsSuccessStatusCode)
             return false;
@@ -81,9 +91,9 @@ public class AudioEncoder
             return memoryStream;
         }
 
-        if (!await TryYTDLP(url, memoryStream))
+        if (!await TryHTTP(url, memoryStream))
         {
-            if (!await TryHTTP(url, memoryStream))
+            if (!await TryYTDLP(url, memoryStream))
             {
                 return memoryStream;
             }
