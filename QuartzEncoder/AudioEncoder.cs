@@ -42,7 +42,7 @@ public class AudioEncoder
 
     private static async Task<bool> TryHTTP(string url, MemoryStream memoryStream)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri?.Scheme is "http" or "https"))
             return false;
 
         if (await HostFilterHandler.IsLocalhostOrPrivateNetwork(uri))
@@ -91,9 +91,9 @@ public class AudioEncoder
             return memoryStream;
         }
 
-        if (!await TryHTTP(url, memoryStream))
+        if (!await TryYTDLP(url, memoryStream))
         {
-            if (!await TryYTDLP(url, memoryStream))
+            if (!await TryHTTP(url, memoryStream))
             {
                 return memoryStream;
             }
