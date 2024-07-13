@@ -1,6 +1,7 @@
 ﻿namespace QuartzEncoder;
 
 using FFMpegCore;
+using FFMpegCore.Arguments;
 using FFMpegCore.Pipes;
 using System;
 using System.Diagnostics;
@@ -59,7 +60,7 @@ public class AudioEncoder
         if (mimeType is null || length is null)
             return false;
 
-        if(!mimeType.StartsWith("audio/"))
+        if (!mimeType.StartsWith("audio/"))
             return false;
 
         if (length > MaxFileSize)
@@ -106,7 +107,7 @@ public class AudioEncoder
         memoryStream.Seek(0, SeekOrigin.Begin);
 
         // clean up old files
-        foreach(var filePath in Directory.EnumerateFiles(CachePath))
+        foreach (var filePath in Directory.EnumerateFiles(CachePath))
         {
             var fileDate = File.GetCreationTime(filePath);
             var age = DateTime.Now - fileDate;
@@ -164,7 +165,9 @@ public class AudioEncoder
         using var rightChannel = new MemoryStream();
 
         await FFMpegArguments
-            .FromPipeInput(new StreamPipeSource(stream))
+            .FromPipeInput(new StreamPipeSource(stream), args =>
+                args.WithCustomArgument("-filter_complex \"[0:a]channelsplit=channel_layout=stereo[left][right]\"")
+            )
             .MultiOutput(args =>
             {
                 args
@@ -175,12 +178,12 @@ public class AudioEncoder
                          {
                              o.Pan();
                          });*/
-                         o.WithCustomArgument("-map_channel 0.0.0");
+                         o.WithCustomArgument("-map \"[left]\"");
                      })
                     .OutputToPipe(new StreamPipeSink(rightChannel), o =>
                     {
                         Options(o);
-                        o.WithCustomArgument("-map_channel 0.0.1");
+                        o.WithCustomArgument("-map \"[right]\"");
                     });
             })
             .ProcessAsynchronously();
