@@ -92,13 +92,14 @@ public class AudioEncoder
             return memoryStream;
         }
 
-        if (!await TryYTDLP(url, memoryStream))
+        if (!await TryHTTP(url, memoryStream))
         {
-            if (!await TryHTTP(url, memoryStream))
+            if (!await TryYTDLP(url, memoryStream))
             {
                 return memoryStream;
             }
         }
+
 
         memoryStream.Seek(0, SeekOrigin.Begin);
         using var writeStream = File.OpenWrite(Path.Combine(CachePath, hash));
@@ -118,9 +119,8 @@ public class AudioEncoder
         return memoryStream;
     }
 
-    public static async Task<byte[]?> DownloadDfpwm(string url)
+    public static async Task<byte[]?> ToDfpwm(Stream stream)
     {
-        using var stream = await DownloadTrack(url);
         if (stream.Length == 0)
             return null;
 
@@ -139,6 +139,13 @@ public class AudioEncoder
         return memoryStream.ToArray();
     }
 
+    public static async Task<byte[]?> DownloadDfpwm(string url)
+    {
+        using var stream = await DownloadTrack(url);
+
+        return await ToDfpwm(stream);
+    }
+
     public class MdfpwmMeta
     {
         public string? Artist { get; set; }
@@ -146,10 +153,8 @@ public class AudioEncoder
         public string? Album { get; set; }
     }
 
-    public static async Task<byte[]?> DownloadMdfpwm(string url, MdfpwmMeta meta)
+    public static async Task<byte[]?> ToMdfpwm(Stream stream, MdfpwmMeta meta)
     {
-        using var stream = await DownloadTrack(url);
-
         if (stream.Length == 0)
             return null;
 
@@ -172,14 +177,14 @@ public class AudioEncoder
             {
                 args
                     .OutputToPipe(new StreamPipeSink(leftChannel), o =>
-                     {
-                         Options(o);
-                         /*o.WithAudioFilters(o =>
-                         {
-                             o.Pan();
-                         });*/
-                         o.WithCustomArgument("-map \"[left]\"");
-                     })
+                    {
+                        Options(o);
+                        /*o.WithAudioFilters(o =>
+                        {
+                            o.Pan();
+                        });*/
+                        o.WithCustomArgument("-map \"[left]\"");
+                    })
                     .OutputToPipe(new StreamPipeSink(rightChannel), o =>
                     {
                         Options(o);
@@ -218,6 +223,13 @@ public class AudioEncoder
         }
 
         return mdfpwm.ToArray();
+    }
+
+    public static async Task<byte[]?> DownloadMdfpwm(string url, MdfpwmMeta meta)
+    {
+        using var stream = await DownloadTrack(url);
+
+        return await ToMdfpwm(stream, meta);
     }
 
     static byte[] ToLittleEndianBytes(int number)
