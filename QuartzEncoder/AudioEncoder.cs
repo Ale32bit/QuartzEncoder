@@ -132,7 +132,7 @@ public class AudioEncoder
                 o.WithAudioSamplingRate(48000);
                 o.WithAudioBitrate(48);
                 o.ForceFormat("dfpwm");
-                o.WithCustomArgument("-af \"pan=mono|c0=c0+c1\"");
+                o.WithCustomArgument("-ac 1");
             })
             .ProcessAsynchronously();
 
