@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34316.72
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuartzEncoder", "QuartzEncoder\QuartzEncoder.csproj", "{8C3FEB81-1B26-4F7B-B7C2-72C1EE21C839}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuartzEncoder", "QuartzEncoder\QuartzEncoder.csproj", "{8C3FEB81-1B26-4F7B-B7C2-72C1EE21C839}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FFMpegCore", "FFMpegCore\FFMpegCore.csproj", "{F5DECDE4-EB58-4FB6-8405-83F1824B0B22}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{8C3FEB81-1B26-4F7B-B7C2-72C1EE21C839}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8C3FEB81-1B26-4F7B-B7C2-72C1EE21C839}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C3FEB81-1B26-4F7B-B7C2-72C1EE21C839}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5DECDE4-EB58-4FB6-8405-83F1824B0B22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5DECDE4-EB58-4FB6-8405-83F1824B0B22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5DECDE4-EB58-4FB6-8405-83F1824B0B22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5DECDE4-EB58-4FB6-8405-83F1824B0B22}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
