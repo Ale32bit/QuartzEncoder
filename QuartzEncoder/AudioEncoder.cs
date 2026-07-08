@@ -26,7 +26,7 @@ public class AudioEncoder
         var ytDlpProcessStartInfo = new ProcessStartInfo
         {
             FileName = "yt-dlp",
-            Arguments = $"--match-filters \"duration<10m\" -x -o - {url}",
+            Arguments = $"--no-playlist --match-filters \"duration<10m\" -x -o - {url}",
             RedirectStandardOutput = true,
             UseShellExecute = false
         };
