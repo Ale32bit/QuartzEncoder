@@ -1,19 +1,14 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Net;
 
 namespace QuartzEncoder.Controllers;
 
 [Route("")]
 [ApiController]
-public class DfpwmController : ControllerBase
+public class DfpwmController(ILogger<DfpwmController> logger, DiscordService discord) : ControllerBase
 {
-    private readonly ILogger<DfpwmController> _logger;
-    public DfpwmController(ILogger<DfpwmController> logger)
-    {
-        _logger = logger;
-    }
-
     /// <summary>
     /// Download and convert audio to mono format DFPWM1a
     /// </summary>
@@ -22,8 +17,7 @@ public class DfpwmController : ControllerBase
     [HttpGet("dfpwm")]
     public async Task<IActionResult> Dfpwm([FromQuery] string url)
     {
-        var clientIp = HttpContext.Connection.RemoteIpAddress;
-        _logger.LogInformation("[{clientIp}] Converting {url}", clientIp, url);
+        await Alert(url);
 
         var buffer = await AudioEncoder.DownloadDfpwm(url);
 
@@ -44,8 +38,7 @@ public class DfpwmController : ControllerBase
     [HttpGet("mdfpwm")]
     public async Task<IActionResult> Mdfpwm([FromQuery] string url, string? artist, string? title, string? album)
     {
-        var clientIp = HttpContext.Connection.RemoteIpAddress;
-        _logger.LogInformation("[{clientIp}] Converting {url}", clientIp, url);
+        await Alert(url);
 
         var buffer = await AudioEncoder.DownloadMdfpwm(url, new()
         {
@@ -63,8 +56,7 @@ public class DfpwmController : ControllerBase
     [HttpPost("dfpwmfile")]
     public async Task<IActionResult> DfpwmFile(IFormFile file)
     {
-        var clientIp = HttpContext.Connection.RemoteIpAddress;
-        _logger.LogInformation("[{clientIp}] Converting {url}", clientIp, file.FileName);
+        await Alert(file.FileName);
 
         if (!file.ContentType.StartsWith("audio/"))
             return BadRequest("Only audio files supported");
@@ -81,10 +73,10 @@ public class DfpwmController : ControllerBase
     }
 
     [HttpPost("mdfpwmfile")]
-    public async Task<IActionResult> MdfpwmFile(IFormFile file, [FromQuery] string? artist, string? title, string? album)
+    public async Task<IActionResult> MdfpwmFile(IFormFile file, [FromQuery] string? artist, string? title,
+        string? album)
     {
-        var clientIp = HttpContext.Connection.RemoteIpAddress;
-        _logger.LogInformation("[{clientIp}] Converting {url}", clientIp, file.FileName);
+        await Alert(file.FileName);
 
         if (!file.ContentType.StartsWith("audio/"))
             return BadRequest("Only audio files supported");
@@ -103,5 +95,24 @@ public class DfpwmController : ControllerBase
             return BadRequest("Invalid data");
 
         return File(buffer, "audio/mdfpwm", "audio.mdfpwm");
+    }
+
+    private async Task Alert(string file)
+    {
+        var clientIp = HttpContext.Connection.RemoteIpAddress;
+        logger.LogInformation("[{clientIp}] Converting {file}", clientIp, file);
+
+        var remoteAddress = HttpContext.Connection.RemoteIpAddress;
+        if (remoteAddress is not null)
+        {
+            if (!LocalAddress.IsLanAddress(remoteAddress))
+            {
+                await discord.Alert(file, remoteAddress);
+            }
+        }
+        else
+        {
+            logger.LogWarning("Unable to determine remote address");
+        }
     }
 }
