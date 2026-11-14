@@ -2,9 +2,15 @@
 
 FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS base
 USER root
-RUN apt-get update -y && apt-get install -y curl ffmpeg
+RUN apt-get update -y && apt-get install -y curl ffmpeg unzip
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/bin/yt-dlp
 RUN chmod a+rx /usr/bin/yt-dlp
+
+ENV DENO_INSTALL=/usr/local/deno
+RUN curl -fsSL https://deno.land/install.sh | sh -s -- -y \
+    && chmod -R a+rx $DENO_INSTALL
+ENV PATH="$DENO_INSTALL/bin:$PATH"
+
 USER app
 WORKDIR /app
 EXPOSE 8080
